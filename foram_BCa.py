@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import os
 import pandas as pd
@@ -10,9 +9,30 @@ import statsmodels.api as sm
 import time
 
 def depth_m_to_pressure_bar(depth):
+    """Converts depth in meters to pressure in bar
+
+    Args:
+        depth (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    
     pressure_bar=1023.6*9.80665*depth*10**-5
     return pressure_bar
 def linregress(df, x_transform=None , y_transform=None, features='B_Ca_umolmol', target='omega_c'):
+    """Perform linear regression on a dataframe with choice of x and y transformations
+
+    Args:
+        df (_type_): _description_
+        x_transform (_type_, optional): _description_. Defaults to None.
+        y_transform (_type_, optional): _description_. Defaults to None.
+        features (str, optional): _description_. Defaults to 'B_Ca_umolmol'.
+        target (str, optional): _description_. Defaults to 'omega_c'.
+
+    Returns:
+        _type_: _description_
+    """
     
     X=df[features].values
     y=df[target].values
@@ -33,7 +53,17 @@ def linregress(df, x_transform=None , y_transform=None, features='B_Ca_umolmol',
 
     return res_ols
 def linpred(xpredict, mdl, x_transform=None, y_transform=None):
-    
+    """Get predictions from a linear model with choice of x and y transformations
+
+    Args:
+        xpredict (_type_): _description_
+        mdl (_type_): _description_
+        x_transform (_type_, optional): _description_. Defaults to None.
+        y_transform (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     
     if x_transform != None:
         xpredict=x_transform(xpredict)
@@ -51,6 +81,18 @@ def linpred(xpredict, mdl, x_transform=None, y_transform=None):
     
     return ypred
 def omega_depth_correction(omega, depth, temp=2, newdepth=0):
+    """Use kgen to correct omega for depth (pressure)
+
+    Args:
+        omega (_type_): _description_
+        depth (_type_): _description_
+        temp (int, optional): _description_. Defaults to 2.
+        newdepth (int, optional): _description_. Defaults to 0.
+
+    Returns:
+        _type_: _description_
+    """
+    
     pressure_coefficients = kgen.coefs.K_presscorr_coefs
     pressure_correction = kgen.K_functions.calc_pressure_correction(coefficients=pressure_coefficients['KspC'], p_bar=depth_m_to_pressure_bar(depth), temp_c=temp)
     omega0=omega*pressure_correction
@@ -107,8 +149,6 @@ Yu_Elder_Rae_df['CO3sat_a']=Yu_Elder_Rae_df['KspA']/calcium_conc*10**6
 #calculate omega
 Yu_Elder_Rae_df['omega_c']=(Yu_Elder_Rae_df['DCO3_c']+Yu_Elder_Rae_df['CO3sat_c'])/Yu_Elder_Rae_df['CO3sat_c']
 Yu_Elder_Rae_df['omega_a']=(Yu_Elder_Rae_df['DCO3_a']+Yu_Elder_Rae_df['CO3sat_a'])/Yu_Elder_Rae_df['CO3sat_a']
-
-
 
 
 # import Dai data
@@ -194,8 +234,6 @@ for species in species_names:
     species_fit_DCO3_dict={'lin':linmdl, 'log':logmdl}
     Yu_Elder_Rae_Brown_df.loc[Yu_Elder_Rae_Brown_df['species']==species, 'DCO3_c_linpred']=linpred(X, linmdl)
     Yu_Elder_Rae_Brown_df.loc[Yu_Elder_Rae_Brown_df['species']==species, 'lin_DCO3_r_sq']=linmdl.rsquared
-    
-    
 ax.legend(fontsize=8)
 ax.set_xlabel(r'B/Ca ($\mu$mol/mol)')
 ax.set_ylabel(r'$\Omega_c$')
@@ -229,7 +267,7 @@ Yu_Elder_Rae_Brown_df.to_csv(data_path/"BCa_omega_calibration_df.csv")
 
 
 
-## Foram data   
+## Using calibrations on paleo foram data   
 #import foram data
 foram_path = data_path/"foram_database_240923-1419.csv"
 
@@ -304,12 +342,7 @@ foram_df['omega_linfit_3000']=omega_depth_correction(foram_df['omega_linfit'], f
 foram_df['omega_logfit_3000']=omega_depth_correction(foram_df['omega_logfit'], foram_df['palaeo_depth_m'], newdepth=3000)
 
 
-
-
-
 ## Temperature data
-
-
 meckler_df=pd.read_csv(data_path/"Meckler2022_temp.csv")
 # Create a loess fit
 lowess = sm.nonparametric.lowess(meckler_df['temp_c'], meckler_df['age_Ma'], frac=0.2, it=3, delta=0.0, is_sorted=False, missing='drop', return_sorted=True)
@@ -332,14 +365,13 @@ plt.title('Meckler et al. (2022) clumped isotopes')
 
 #interpolate onto foram data
 foram_df['temp_c_Meckler']=np.nan
-foram_df['temp_c_Meckler']=np.interp(foram_df['age_Ma'], meckler_df['age_Ma'], lowess_df['temp_c_smooth'])
+foram_df['temp_c_Meckler']=np.interp(foram_df['age_Ma'], merged_df['age_Ma'], merged_df['temp_c_smooth'])
 
 
 
 
 
-## Ca and Mg
-
+## Seawater Ca and Mg 
 #read in Ca and Mg data
 Ca_df=pd.read_excel(data_path/"calcium_magnesium.xlsx", sheet_name='calcium')
 Mg_df=pd.read_excel(data_path/"calcium_magnesium.xlsx", sheet_name='magnesium')
